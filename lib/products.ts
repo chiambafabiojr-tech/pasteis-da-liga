@@ -64,7 +64,7 @@ export const products: Product[] = [
   price: 10.0,
   category: "drink",
   hero: "Arlequina",
-  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ddc8da13-f7d8-4d61-b4cb-0235d4ab9582-1PJvfXSUCVhHLmByvIEy9wXRsgxR8u.jpg"
+  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ddc8da13-f7d8-4d61-b4cb-0235d4ab9582-1PJvfXSUCVhHLmByvIEy9wXRsgxR8u.jpg",
 },
 {
   id: "drink-aquaman",
@@ -73,7 +73,7 @@ export const products: Product[] = [
   price: 10.0,
   category: "drink",
   hero: "Aquaman",
-  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2f660366-9efc-4483-a7dd-832eaa4f5cdb-waIRSISuoBCibKcebGvvxnEW0bZMjN.jpg"
+  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2f660366-9efc-4483-a7dd-832eaa4f5cdb-waIRSISuoBCibKcebGvvxnEW0bZMjN.jpg",
 },
 {
   id: "drink-lanterna-verde",
@@ -82,7 +82,7 @@ export const products: Product[] = [
   price: 10.0,
   category: "drink",
   hero: "Lanterna Verde",
-  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/87d26151-0e96-4422-b4ea-7f76e33b6284-PUhNtRsW8Uez8FDULOn9AMdNtga15o.jpg"
+  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/87d26151-0e96-4422-b4ea-7f76e33b6284-PUhNtRsW8Uez8FDULOn9AMdNtga15o.jpg",
 }
    // Combos
   {
