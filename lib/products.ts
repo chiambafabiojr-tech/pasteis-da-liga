@@ -83,7 +83,7 @@ export const products: Product[] = [
   category: "drink",
   hero: "Lanterna Verde",
   image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/87d26151-0e96-4422-b4ea-7f76e33b6284-PUhNtRsW8Uez8FDULOn9AMdNtga15o.jpg",
-}
+},
    // Combos
   {
     id: "combo-mulher-gato",
