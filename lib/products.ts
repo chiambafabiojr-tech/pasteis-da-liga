@@ -58,30 +58,33 @@ export const products: Product[] = [
   },
   // Drinks
   {
-    id: "drink-arlequina",
-    name: "Arlequina",
-    description: "Morango – doce, refrescante e encantador",
-    price: 10.0,
-    category: "drink",
-    hero: "Arlequina",
-  },
-  {
-    id: "drink-aquaman",
-    name: "Aquaman",
-    description: "Maracujá – tropical e vibrante como o mar",
-    price: 10.0,
-    category: "drink",
-    hero: "Aquaman",
-  },
-  {
-    id: "drink-lanterna-verde",
-    name: "Lanterna Verde",
-    description: "Limão – energético e cheio de vida",
-    price: 10.0,
-    category: "drink",
-    hero: "Lanterna Verde",
-  },
-  // Combos
+  id: "drink-arlequina",
+  name: "Arlequina",
+  description: "Morango(morango/xarope), refrigerante e leite condensado",
+  price: 10.0,
+  category: "drink",
+  hero: "Arlequina",
+  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/ddc8da13-f7d8-4d61-b4cb-0235d4ab9582-1PJvfXSUCVhHLmByvIEy9wXRsgxR8u.jpg"
+},
+{
+  id: "drink-aquaman",
+  name: "Aquaman",
+  description: "Maracujá (maracujá/xarope), refrigerante e leite condensado",
+  price: 10.0,
+  category: "drink",
+  hero: "Aquaman",
+  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/2f660366-9efc-4483-a7dd-832eaa4f5cdb-waIRSISuoBCibKcebGvvxnEW0bZMjN.jpg"
+},
+{
+  id: "drink-lanterna-verde",
+  name: "Lanterna Verde",
+  description: "Limão (limão/xarope), refrigerante, leite condensado e um toque de hortelã",
+  price: 10.0,
+  category: "drink",
+  hero: "Lanterna Verde",
+  image: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/87d26151-0e96-4422-b4ea-7f76e33b6284-PUhNtRsW8Uez8FDULOn9AMdNtga15o.jpg"
+}
+   // Combos
   {
     id: "combo-mulher-gato",
     name: "Combo Mulher-Gato",
