@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedidos - Liga do Sabor</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; background: #f0f0f0; }
+    h1 { color: #333; }
+    form { margin-bottom: 20px; }
+    input, button { padding: 8px; margin: 5px; }
+    ul { list-style: none; padding: 0; }
+    li { background: #fff; margin-bottom: 5px; padding: 10px; border-radius: 5px; box-shadow: 0 0 3px rgba(0,0,0,0.1); }
+  </style>
+</head>
+<body>
+  <h1>Formulário de Pedidos</h1>
+  <form id="pedidoForm">
+    <input type="text" id="cliente" placeholder="Nome do cliente" required>
+    <input type="text" id="item" placeholder="Item" required>
+    <input type="number" id="quantidade" placeholder="Quantidade" required>
+    <button type="submit">Enviar Pedido</button>
+  </form>
+  <h2>Pedidos cadastrados:</h2>
+  <ul id="listaPedidos"></ul>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDFCEUJZ_DZylIYO6XDgCK-8Do79zHfyWk",
+      authDomain: "pasteis-da-liga.firebaseapp.com",
+      projectId: "pasteis-da-liga",
+      storageBucket: "pasteis-da-liga.firebasestorage.app",
+      messagingSenderId: "373484623857",
+      appId: "1:373484623857:web:772b6a9bb18340cb291650",
+      measurementId: "G-GZV72Z3YCF"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const form = document.getElementById("pedidoForm");
+    const listaPedidos = document.getElementById("listaPedidos");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const pedido = {
+        cliente: document.getElementById("cliente").value,
+        item: document.getElementById("item").value,
+        quantidade: Number(document.getElementById("quantidade").value),
+        data: new Date()
+      };
+      try {
+        await db.collection("pedidos").add(pedido);
+        form.reset();
+        mostrarPedidos();
+      } catch (err) {
+        console.error(err);
+        alert("Erro ao salvar pedido!");
+      }
+    });
+    async function mostrarPedidos() {
+      const snapshot = await db.collection("pedidos").get();
+      listaPedidos.innerHTML = "";
+      snapshot.forEach(doc => {
+        const p = doc.data();
+        listaPedidos.innerHTML += `<li>${p.cliente} - ${p.item} x${p.quantidade}</li>`;
+      });
+    }
+    mostrarPedidos();
+  </script>
+</body>
+</html>

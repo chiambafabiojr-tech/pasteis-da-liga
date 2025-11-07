@@ -1,5 +1,21 @@
 import type { CartItem } from "./cart"
+import { initializeApp } from "firebase/app"
+import { getFirestore, collection, addDoc, getDocs, updateDoc, doc, query, orderBy } from "firebase/firestore"
 
+const firebaseConfig = {
+  apiKey: "AIzaSyAjrSX4Argng0h5NScPGfJc_Mt14OtUA-E",
+  authDomain: "pasteis-da-liga-9159e.firebaseapp.com",
+  projectId: "pasteis-da-liga-9159e",
+  storageBucket: "pasteis-da-liga-9159e.firebasestorage.app",
+  messagingSenderId: "948055380099",
+  appId: "1:948055380099:web:64da2c9b22c94a84998bb6",
+  measurementId: "G-WHTMEPPF1P"
+}
+
+const app = initializeApp(firebaseConfig)
+const db = getFirestore(app)
+
+// Tipo de pedido
 export interface Order {
   id: string
   customerName: string
@@ -14,44 +30,58 @@ export interface Order {
   paymentProof?: string
 }
 
-export function saveOrder(order: Omit<Order, "id" | "createdAt" | "status">): Order {
-  const orders = getOrders()
-
-  const newOrder: Order = {
+// 🔹 Salvar pedido no Firestore
+export async function saveOrder(order: Omit<Order, "id" | "createdAt" | "status">): Promise<Order> {
+  const newOrder = {
     ...order,
-    id: `ORDER-${Date.now()}`,
-    createdAt: new Date().toISOString(),
     status: "pending",
+    createdAt: new Date(),
   }
 
-  orders.push(newOrder)
-  localStorage.setItem("pasteis-liga-orders", JSON.stringify(orders))
+  const docRef = await addDoc(collection(db, "pedidos"), newOrder)
 
-  return newOrder
+  return {
+    id: docRef.id,
+    ...newOrder,
+    createdAt: newOrder.createdAt.toISOString(),
+  } as Order
 }
 
-export function getOrders(): Order[] {
-  if (typeof window === "undefined") return []
+// 🔹 Buscar pedidos do Firestore
+export async function getOrders(): Promise<Order[]> {
+  const pedidosRef = collection(db, "pedidos")
+  const q = query(pedidosRef, orderBy("createdAt", "desc"))
+  const snapshot = await getDocs(q)
 
-  const ordersData = localStorage.getItem("pasteis-liga-orders")
-  if (!ordersData) return []
-
-  return JSON.parse(ordersData)
+  return snapshot.docs.map((docSnap) => {
+    const data = docSnap.data()
+    return {
+      id: docSnap.id,
+      customerName: data.customerName || "Sem nome",
+      customerPhone: data.customerPhone || "",
+      customerEmail: data.customerEmail || "",
+      deliveryAddress: data.deliveryAddress || "",
+      items: data.items || [],
+      total: data.total || 0,
+      status: data.status || "pending",
+      createdAt: data.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+      paymentMethod: data.paymentMethod || "cash",
+      paymentProof: data.paymentProof || "",
+    } as Order
+  })
 }
 
-export function getOrderById(id: string): Order | undefined {
-  const orders = getOrders()
-  return orders.find((order) => order.id === id)
+// 🔹 Buscar pedido específico
+export async function getOrderById(id: string): Promise<Order | undefined> {
+  const pedidos = await getOrders()
+  return pedidos.find((order) => order.id === id)
 }
 
-export function updateOrderStatus(id: string, status: Order["status"]): Order | undefined {
-  const orders = getOrders()
-  const order = orders.find((o) => o.id === id)
+// 🔹 Atualizar status do pedido
+export async function updateOrderStatus(id: string, status: Order["status"]): Promise<Order | undefined> {
+  const pedidoRef = doc(db, "pedidos", id)
+  await updateDoc(pedidoRef, { status })
 
-  if (order) {
-    order.status = status
-    localStorage.setItem("pasteis-liga-orders", JSON.stringify(orders))
-  }
-
-  return order
+  const pedidos = await getOrders()
+  return pedidos.find((order) => order.id === id)
 }
