@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOrders } from "@/lib/firebase/getOrders";
+import { getOrders } from "@/lib/orders";
 
 type Order = {
   id: string;
@@ -19,14 +19,12 @@ export default function AdminPage() {
     const fetchOrders = async () => {
       try {
         const data = await getOrders();
-
         if (!data || !Array.isArray(data)) {
           setError(true);
           setOrders([]);
           setLoading(false);
           return;
         }
-
         setOrders(data);
       } catch (err) {
         console.error("Erro ao buscar pedidos:", err);
@@ -48,7 +46,7 @@ export default function AdminPage() {
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Pedidos</h1>
       <div className="grid gap-4">
-        {Array.isArray(orders) && orders.map((order) => (
+        {orders.map((order) => (
           <div key={order.id} className="border rounded-lg p-4">
             <h3 className="font-semibold">{order.name || "Sem nome"}</h3>
             <p className="text-sm text-gray-600">ID: {order.id}</p>
