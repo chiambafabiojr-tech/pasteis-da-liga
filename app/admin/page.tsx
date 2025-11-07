@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Package, Clock, CheckCircle2, Truck, ShoppingBag, DollarSign, Lock } from "lucide-react"
 import Link from "next/link"
 
-const ADMIN_PASSWORD = "pasteis2025" // Você pode mudar essa senha
+const ADMIN_PASSWORD = "pasteis2025" // você pode mudar essa senha
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -59,8 +59,12 @@ export default function AdminPage() {
   }
 
   const loadOrders = () => {
-    const allOrders = getOrders()
-    setOrders(allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()))
+    const allOrders = getOrders() || [] // garante que seja sempre um array
+    setOrders(
+      allOrders.sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    )
 
     const stats = {
       total: allOrders.length,
@@ -68,7 +72,7 @@ export default function AdminPage() {
       confirmed: allOrders.filter((o) => o.status === "confirmed").length,
       preparing: allOrders.filter((o) => o.status === "preparing").length,
       delivered: allOrders.filter((o) => o.status === "delivered").length,
-      revenue: allOrders.reduce((sum, o) => sum + o.total, 0),
+      revenue: allOrders.reduce((sum, o) => sum + (o.total || 0), 0),
     }
     setStats(stats)
   }
@@ -85,10 +89,8 @@ export default function AdminPage() {
       preparing: { label: "Preparando", variant: "default" as const, icon: Package },
       delivered: { label: "Entregue", variant: "secondary" as const, icon: Truck },
     }
-
     const config = statusConfig[status]
     const Icon = config.icon
-
     return (
       <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
         <Icon className="h-3 w-3" />
@@ -166,7 +168,7 @@ export default function AdminPage() {
         <div className="pt-3 border-t-2 border-border">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-xl font-bold text-primary">R$ {order.total.toFixed(2)}</span>
+            <span className="text-xl font-bold text-primary">R$ {order.total?.toFixed(2)}</span>
           </div>
         </div>
       </div>
