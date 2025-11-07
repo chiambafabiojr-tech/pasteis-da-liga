@@ -1,47 +1,37 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { getOrders } from "@/lib/firebase";
+import { getOrders } from "@/lib/firebase/getOrders";
 
-interface Order {
-  id?: string;
-  cliente?: string;
-  total?: number;
+type Order = {
+  id: string;
+  // Adicione aqui os outros campos do pedido que você usa
+  name?: string;
+  value?: number;
   status?: string;
-  [key: string]: any;
-}
+};
 
 export default function AdminPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [erro, setErro] = useState<string | null>(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const data = await getOrders();
 
-        console.log("📦 Dados recebidos de getOrders:", data);
-
-        // Garante que o resultado sempre seja um array
-        let ordersArray: Order[] = [];
-
-        if (Array.isArray(data)) {
-          ordersArray = data;
-        } else if (data && typeof data === "object") {
-          ordersArray = Object.keys(data).map((key) => ({
-            id: key,
-            ...data[key],
-          }));
-        } else {
-          console.warn("⚠️ getOrders retornou um formato inesperado:", data);
-          ordersArray = [];
+        // Garantir que seja sempre um array
+        if (!Array.isArray(data)) {
+          console.error("getOrders não retornou um array:", data);
+          setError(true);
+          setOrders([]);
+          setLoading(false);
+          return;
         }
 
-        setOrders(ordersArray);
+        setOrders(data);
       } catch (err) {
-        console.error("❌ Erro ao buscar pedidos:", err);
-        setErro("Erro ao carregar pedidos.");
+        console.error("Erro ao buscar pedidos:", err);
+        setError(true);
         setOrders([]);
       } finally {
         setLoading(false);
@@ -51,35 +41,22 @@ export default function AdminPage() {
     fetchOrders();
   }, []);
 
-  if (loading) return <p>⏳ Carregando pedidos...</p>;
-  if (erro) return <p>❌ {erro}</p>;
+  if (loading) return <p>Carregando pedidos...</p>;
+  if (error) return <p>Erro ao carregar pedidos.</p>;
   if (!orders || orders.length === 0) return <p>Nenhum pedido encontrado.</p>;
 
   return (
-    <div style={{ padding: "20px" }}>
-      <h1>Painel de Administração</h1>
-      <table border={1} cellPadding={8} style={{ width: "100%", marginTop: 20 }}>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Cliente</th>
-            <th>Total</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => (
-            <tr key={order.id || Math.random()}>
-              <td>{order.id}</td>
-              <td>{order.cliente || "—"}</td>
-              <td>
-                {order.total ? `R$ ${order.total.toFixed(2)}` : "—"}
-              </td>
-              <td>{order.status || "Pendente"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div>
+      <h1>Pedidos</h1>
+      <ul>
+        {orders.map((order) => (
+          <li key={order.id}>
+            <p>Nome: {order.name || "Não informado"}</p>
+            <p>Valor: {order.value || 0}</p>
+            <p>Status: {order.status || "Desconhecido"}</p>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
