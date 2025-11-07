@@ -8,7 +8,7 @@ interface Order {
   cliente: string;
   total: number;
   status: string;
-  // adicione outros campos que você usa
+  // adicione outros campos do pedido que você usa
 }
 
 export default function AdminPage() {
@@ -18,11 +18,13 @@ export default function AdminPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const ordersData = await getOrders(); // pega os pedidos
-        setOrders(Array.isArray(ordersData) ? ordersData : []); // garante que seja sempre um array
+        const result = await getOrders(); // espera a Promise resolver
+        // garante que sempre seja um array
+        const ordersArray = Array.isArray(result) ? result : Object.values(result || {});
+        setOrders(ordersArray);
       } catch (error) {
         console.error("Erro ao buscar pedidos:", error);
-        setOrders([]); // se der erro, mostra lista vazia
+        setOrders([]); // evita que quebre
       } finally {
         setLoading(false);
       }
