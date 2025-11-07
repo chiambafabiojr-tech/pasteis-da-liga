@@ -1,9 +1,10 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { getOrders } from "@/lib/firebase/getOrders";
 
 type Order = {
   id: string;
-  // Adicione aqui os outros campos do pedido que você usa
   name?: string;
   value?: number;
   status?: string;
@@ -19,9 +20,7 @@ export default function AdminPage() {
       try {
         const data = await getOrders();
 
-        // Garantir que seja sempre um array
-        if (!Array.isArray(data)) {
-          console.error("getOrders não retornou um array:", data);
+        if (!data || !Array.isArray(data)) {
           setError(true);
           setOrders([]);
           setLoading(false);
@@ -41,22 +40,23 @@ export default function AdminPage() {
     fetchOrders();
   }, []);
 
-  if (loading) return <p>Carregando pedidos...</p>;
-  if (error) return <p>Erro ao carregar pedidos.</p>;
-  if (!orders || orders.length === 0) return <p>Nenhum pedido encontrado.</p>;
+  if (loading) return <div className="p-6"><p>Carregando pedidos...</p></div>;
+  if (error) return <div className="p-6"><p className="text-red-500">Erro ao carregar pedidos.</p></div>;
+  if (!orders || orders.length === 0) return <div className="p-6"><p>Nenhum pedido encontrado.</p></div>;
 
   return (
-    <div>
-      <h1>Pedidos</h1>
-      <ul>
-        {orders.map((order) => (
-          <li key={order.id}>
-            <p>Nome: {order.name || "Não informado"}</p>
-            <p>Valor: {order.value || 0}</p>
-            <p>Status: {order.status || "Desconhecido"}</p>
-          </li>
+    <div className="container mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Pedidos</h1>
+      <div className="grid gap-4">
+        {Array.isArray(orders) && orders.map((order) => (
+          <div key={order.id} className="border rounded-lg p-4">
+            <h3 className="font-semibold">{order.name || "Sem nome"}</h3>
+            <p className="text-sm text-gray-600">ID: {order.id}</p>
+            <p className="text-sm">Status: {order.status || "Desconhecido"}</p>
+            <p className="font-bold">R$ {order.value?.toFixed(2) || "0.00"}</p>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
