@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Package, Clock, CheckCircle2, Truck, ShoppingBag, DollarSign, Lock } from "lucide-react"
 import Link from "next/link"
 
-const ADMIN_PASSWORD = "pasteis2025" // você pode mudar essa senha
+const ADMIN_PASSWORD = "pasteis2025"
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -30,15 +30,11 @@ export default function AdminPage() {
 
   useEffect(() => {
     const auth = sessionStorage.getItem("admin_authenticated")
-    if (auth === "true") {
-      setIsAuthenticated(true)
-    }
+    if (auth === "true") setIsAuthenticated(true)
   }, [])
 
   useEffect(() => {
-    if (isAuthenticated) {
-      loadOrders()
-    }
+    if (isAuthenticated) loadOrders()
   }, [isAuthenticated])
 
   const handleLogin = (e: React.FormEvent) => {
@@ -59,7 +55,13 @@ export default function AdminPage() {
   }
 
   const loadOrders = () => {
-    const allOrders = getOrders() || [] // garante que seja sempre um array
+    const allOrders = getOrders() ?? []
+    if (!Array.isArray(allOrders)) {
+      console.error("getOrders não retornou um array:", allOrders)
+      setOrders([])
+      return
+    }
+
     setOrders(
       allOrders.sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -72,8 +74,9 @@ export default function AdminPage() {
       confirmed: allOrders.filter((o) => o.status === "confirmed").length,
       preparing: allOrders.filter((o) => o.status === "preparing").length,
       delivered: allOrders.filter((o) => o.status === "delivered").length,
-      revenue: allOrders.reduce((sum, o) => sum + (o.total || 0), 0),
+      revenue: allOrders.reduce((sum, o) => sum + (o.total ?? 0), 0),
     }
+
     setStats(stats)
   }
 
@@ -89,8 +92,10 @@ export default function AdminPage() {
       preparing: { label: "Preparando", variant: "default" as const, icon: Package },
       delivered: { label: "Entregue", variant: "secondary" as const, icon: Truck },
     }
+
     const config = statusConfig[status]
     const Icon = config.icon
+
     return (
       <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
         <Icon className="h-3 w-3" />
@@ -168,7 +173,7 @@ export default function AdminPage() {
         <div className="pt-3 border-t-2 border-border">
           <div className="flex justify-between items-center">
             <span className="text-sm text-muted-foreground">Total</span>
-            <span className="text-xl font-bold text-primary">R$ {order.total?.toFixed(2)}</span>
+            <span className="text-xl font-bold text-primary">R$ {(order.total ?? 0).toFixed(2)}</span>
           </div>
         </div>
       </div>
@@ -256,24 +261,22 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b-4 border-primary bg-card">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground tracking-tight">PASTÉIS DA LIGA</h1>
-              <p className="text-sm text-muted-foreground">Painel Administrativo</p>
-            </div>
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">PASTÉIS DA LIGA</h1>
+            <p className="text-sm text-muted-foreground">Painel Administrativo</p>
+          </div>
 
-            <div className="flex gap-2">
-              <Button onClick={handleLogout} variant="outline" className="border-2 font-bold bg-transparent">
-                Sair
+          <div className="flex gap-2">
+            <Button onClick={handleLogout} variant="outline" className="border-2 font-bold bg-transparent">
+              Sair
+            </Button>
+            <Link href="/">
+              <Button variant="outline" className="border-2 font-bold bg-transparent">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Voltar ao Site
               </Button>
-              <Link href="/">
-                <Button variant="outline" className="border-2 font-bold bg-transparent">
-                  <ArrowLeft className="mr-2 h-4 w-4" />
-                  Voltar ao Site
-                </Button>
-              </Link>
-            </div>
+            </Link>
           </div>
         </div>
       </header>
