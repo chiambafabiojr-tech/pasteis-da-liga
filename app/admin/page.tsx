@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label"
 import { ArrowLeft, Package, Clock, CheckCircle2, Truck, ShoppingBag, DollarSign, Lock } from "lucide-react"
 import Link from "next/link"
 
-const ADMIN_PASSWORD = "pasteis2025"
+const ADMIN_PASSWORD = "pasteis2025" // Senha de acesso
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -43,9 +43,7 @@ export default function AdminPage() {
       setIsAuthenticated(true)
       sessionStorage.setItem("admin_authenticated", "true")
       setError("")
-    } else {
-      setError("Senha incorreta!")
-    }
+    } else setError("Senha incorreta!")
   }
 
   const handleLogout = () => {
@@ -55,29 +53,23 @@ export default function AdminPage() {
   }
 
   const loadOrders = () => {
-    const allOrders = getOrders() ?? []
+    let allOrders = getOrders() ?? []
     if (!Array.isArray(allOrders)) {
       console.error("getOrders não retornou um array:", allOrders)
-      setOrders([])
-      return
+      allOrders = []
     }
-
     setOrders(
-      allOrders.sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
+      allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     )
 
-    const stats = {
+    setStats({
       total: allOrders.length,
       pending: allOrders.filter((o) => o.status === "pending").length,
       confirmed: allOrders.filter((o) => o.status === "confirmed").length,
       preparing: allOrders.filter((o) => o.status === "preparing").length,
       delivered: allOrders.filter((o) => o.status === "delivered").length,
       revenue: allOrders.reduce((sum, o) => sum + (o.total ?? 0), 0),
-    }
-
-    setStats(stats)
+    })
   }
 
   const handleStatusChange = (orderId: string, newStatus: Order["status"]) => {
@@ -92,10 +84,8 @@ export default function AdminPage() {
       preparing: { label: "Preparando", variant: "default" as const, icon: Package },
       delivered: { label: "Entregue", variant: "secondary" as const, icon: Truck },
     }
-
     const config = statusConfig[status]
     const Icon = config.icon
-
     return (
       <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
         <Icon className="h-3 w-3" />
@@ -129,21 +119,21 @@ export default function AdminPage() {
         <div>
           <p className="text-sm text-muted-foreground">Itens</p>
           <div className="space-y-1 mt-1">
-            {order.items?.map((item, index) => (
+            {(order.items ?? []).map((item, index) => (
               <div key={index}>
                 <p className="text-sm text-foreground font-medium">
-                  {item.quantity}x {item.product.name}
+                  {item.quantity}x {item.product?.name ?? "Produto"}
                 </p>
                 {item.comboSelection && (
                   <div className="ml-4 mt-1 space-y-0.5">
                     <p className="text-xs text-muted-foreground">Pastéis:</p>
-                    {item.comboSelection.pasteis?.map((pastel, i) => (
+                    {(item.comboSelection.pasteis ?? []).map((pastel, i) => (
                       <p key={i} className="text-xs text-muted-foreground">
                         • {pastel.name}
                       </p>
                     ))}
                     <p className="text-xs text-muted-foreground mt-1">Drinks:</p>
-                    {item.comboSelection.drinks?.map((drink, i) => (
+                    {(item.comboSelection.drinks ?? []).map((drink, i) => (
                       <p key={i} className="text-xs text-muted-foreground">
                         • {drink.name}
                       </p>
@@ -261,22 +251,24 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b-4 border-primary bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">PASTÉIS DA LIGA</h1>
-            <p className="text-sm text-muted-foreground">Painel Administrativo</p>
-          </div>
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground tracking-tight">PASTÉIS DA LIGA</h1>
+              <p className="text-sm text-muted-foreground">Painel Administrativo</p>
+            </div>
 
-          <div className="flex gap-2">
-            <Button onClick={handleLogout} variant="outline" className="border-2 font-bold bg-transparent">
-              Sair
-            </Button>
-            <Link href="/">
-              <Button variant="outline" className="border-2 font-bold bg-transparent">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Voltar ao Site
+            <div className="flex gap-2">
+              <Button onClick={handleLogout} variant="outline" className="border-2 font-bold bg-transparent">
+                Sair
               </Button>
-            </Link>
+              <Link href="/">
+                <Button variant="outline" className="border-2 font-bold bg-transparent">
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Voltar ao Site
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </header>
@@ -334,21 +326,11 @@ export default function AdminPage() {
 
         <Tabs defaultValue="all" className="w-full">
           <TabsList className="grid w-full grid-cols-5 mb-6">
-            <TabsTrigger value="all" className="font-bold">
-              Todos ({stats.total})
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="font-bold">
-              Pendentes ({stats.pending})
-            </TabsTrigger>
-            <TabsTrigger value="confirmed" className="font-bold">
-              Confirmados ({stats.confirmed})
-            </TabsTrigger>
-            <TabsTrigger value="preparing" className="font-bold">
-              Preparando ({stats.preparing})
-            </TabsTrigger>
-            <TabsTrigger value="delivered" className="font-bold">
-              Entregues ({stats.delivered})
-            </TabsTrigger>
+            <TabsTrigger value="all" className="font-bold">Todos ({stats.total})</TabsTrigger>
+            <TabsTrigger value="pending" className="font-bold">Pendentes ({stats.pending})</TabsTrigger>
+            <TabsTrigger value="confirmed" className="font-bold">Confirmados ({stats.confirmed})</TabsTrigger>
+            <TabsTrigger value="preparing" className="font-bold">Preparando ({stats.preparing})</TabsTrigger>
+            <TabsTrigger value="delivered" className="font-bold">Entregues ({stats.delivered})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="all">
@@ -359,42 +341,32 @@ export default function AdminPage() {
               </Card>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {orders.map((order) => (
-                  <OrderCard key={order.id} order={order} />
-                ))}
+                {orders.map((order) => <OrderCard key={order.id} order={order} />)}
               </div>
             )}
           </TabsContent>
 
           <TabsContent value="pending">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filterOrdersByStatus("pending").map((order) => (
-                <OrderCard key={order.id} order={order} />
-              ))}
+              {filterOrdersByStatus("pending").map((order) => <OrderCard key={order.id} order={order} />)}
             </div>
           </TabsContent>
 
           <TabsContent value="confirmed">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filterOrdersByStatus("confirmed").map((order) => (
-                <OrderCard key={order.id} order={order} />
-              ))}
+              {filterOrdersByStatus("confirmed").map((order) => <OrderCard key={order.id} order={order} />)}
             </div>
           </TabsContent>
 
           <TabsContent value="preparing">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filterOrdersByStatus("preparing").map((order) => (
-                <OrderCard key={order.id} order={order} />
-              ))}
+              {filterOrdersByStatus("preparing").map((order) => <OrderCard key={order.id} order={order} />)}
             </div>
           </TabsContent>
 
           <TabsContent value="delivered">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filterOrdersByStatus("delivered").map((order) => (
-                <OrderCard key={order.id} order={order} />
-              ))}
+              {filterOrdersByStatus("delivered").map((order) => <OrderCard key={order.id} order={order} />)}
             </div>
           </TabsContent>
         </Tabs>
