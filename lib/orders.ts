@@ -1,53 +1,88 @@
 // lib/orders.ts
-import { db } from "./firebase";
-import { collection, getDocs, doc, getDoc, addDoc } from "firebase/firestore";
+import { db, isFirebaseConfigured } from "./firebaseConfig"
+import { collection, getDocs, addDoc, doc, getDoc } from "firebase/firestore"
 
-// Tipo (estrutura) de um pedido
-export type Order = {
-  id: string;
-  customerName: string;
-  customerPhone: string;
-  customerEmail?: string;
-  paymentMethod: "pix" | "cash";
-  paymentProof?: string;
-  items: {
-    product: {
-      id: string;
-      name: string;
-      price: number;
-    };
-    quantity: number;
-  }[];
-  total: number;
-  status: string;
-  createdAt: string;
-};
+export interface Order {
+  id: string
+  items: Array<{
+    name: string
+    quantity: number
+    price: number
+  }>
+  total: number
+  customerName?: string
+  customerEmail?: string
+  customerPhone?: string
+  status: string
+  createdAt: Date
+}
 
-// 🔹 Buscar todos os pedidos
 export const getOrders = async (): Promise<Order[]> => {
-  const snapshot = await getDocs(collection(db, "orders"));
-  return snapshot.docs.map((doc) => ({
-    id: doc.id,
-    ...doc.data(),
-  })) as Order[];
-};
+  if (!isFirebaseConfigured || !db) {
+    console.error("[v0] Firebase não configurado")
+    throw new Error("Firebase não está configurado. Adicione as variáveis de ambiente necessárias.")
+  }
 
-// 🔹 Buscar um pedido específico pelo ID
-export const getOrderById = async (id: string): Promise<Order | null> => {
-  const docRef = doc(db, "orders", id);
-  const docSnap = await getDoc(docRef);
-  if (docSnap.exists()) return { id: docSnap.id, ...docSnap.data() } as Order;
-  return null;
-};
+  try {
+    console.log("[v0] Buscando pedidos...")
+    const ordersCollection = collection(db, "orders")
+    const ordersSnapshot = await getDocs(ordersCollection)
+    const ordersList = ordersSnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+    })) as Order[]
+    console.log("[v0] Pedidos encontrados:", ordersList.length)
+    return ordersList
+  } catch (error) {
+    console.error("[v0] Erro ao buscar pedidos:", error)
+    throw error
+  }
+}
 
-// 🔹 Salvar novo pedido no Firestore
-export const saveOrder = async (order: Omit<Order, "id" | "status" | "createdAt">) => {
-  const newOrder = {
-    ...order,
-    status: "Pendente",
-    createdAt: new Date().toISOString(),
-  };
+export const getOrderById = async (orderId: string): Promise<Order | null> => {
+  if (!isFirebaseConfigured || !db) {
+    console.error("[v0] Firebase não configurado")
+    throw new Error("Firebase não está configurado. Adicione as variáveis de ambiente necessárias.")
+  }
 
-  const docRef = await addDoc(collection(db, "orders"), newOrder);
-  return { id: docRef.id, ...newOrder };
-};
+  try {
+    console.log("[v0] Buscando pedido:", orderId)
+    const orderDoc = doc(db, "orders", orderId)
+    const orderSnapshot = await getDoc(orderDoc)
+
+    if (orderSnapshot.exists()) {
+      console.log("[v0] Pedido encontrado")
+      return {
+        id: orderSnapshot.id,
+        ...orderSnapshot.data(),
+        createdAt: orderSnapshot.data().createdAt?.toDate() || new Date(),
+      } as Order
+    }
+    console.log("[v0] Pedido não encontrado")
+    return null
+  } catch (error) {
+    console.error("[v0] Erro ao buscar pedido:", error)
+    throw error
+  }
+}
+
+export const createOrder = async (orderData: Omit<Order, "id" | "createdAt">): Promise<string | null> => {
+  console.log("[v0] Iniciando criação do pedido...", orderData)
+
+  try {
+    const ordersCollection = collection(db, "orders")
+    console.log("[v0] Collection criada, adicionando documento...")
+
+    const docRef = await addDoc(ordersCollection, {
+      ...orderData,
+      createdAt: new Date(),
+    })
+
+    console.log("[v0] Pedido criado com sucesso! ID:", docRef.id)
+    return docRef.id
+  } catch (error) {
+    console.error("[v0] Erro detalhado ao criar pedido:", error)
+    throw error
+  }
+}
