@@ -54,18 +54,27 @@ export default function CheckoutPage() {
     setIsSubmitting(true)
 
     try {
-      // ✅ Adicionado await para salvar o pedido
       const order = await saveOrder({
-        ...formData,
-        items: cart.items,
+        customerName: formData.customerName,
+        customerPhone: formData.customerPhone,
+        customerEmail: formData.customerEmail || "",
+        paymentMethod: formData.paymentMethod,
+        paymentProof: formData.paymentProof || "",
+        items: cart.items.map((item) => ({
+          product: {
+            id: item.product.id,
+            name: item.product.name,
+            price: item.product.price,
+          },
+          quantity: item.quantity,
+        })),
         total: cart.total,
       })
 
       clearCart()
-      // Agora order.id vai existir
-      router.push(`/pedido-confirmado?orderId=${order.id || Date.now()}`)
+      router.push(`/pedido-confirmado?orderId=${order.id}`)
     } catch (error) {
-      console.error("[v0] Error saving order:", error)
+      console.error("❌ Erro ao salvar pedido:", error)
       alert("Erro ao processar pedido. Tente novamente.")
       setIsSubmitting(false)
     }
