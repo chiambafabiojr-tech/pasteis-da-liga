@@ -15,7 +15,7 @@ import Link from "next/link"
 import { PixQRCode } from "@/components/pix-qrcode"
 
 const PIX_CONFIG = {
-  pixKey: "54870892804", // CPF com 11 dígitos
+  pixKey: "54870892804",
   merchantName: "Mariane Ferreira de Laia",
   merchantCity: "Itatiba",
 }
@@ -37,7 +37,7 @@ export default function CheckoutPage() {
     const currentCart = getCart()
     setCart(currentCart)
 
-    if (currentCart.items.length === 0) {
+    if (!currentCart.items || currentCart.items.length === 0) {
       router.push("/")
     }
   }, [router])
@@ -52,6 +52,18 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+
+    console.log("Submit iniciado")
+    console.log("Form data:", formData)
+    console.log("Carrinho:", cart)
+    console.log("Itens:", cart.items)
+    console.log("Total:", cart.total)
+
+    if (!cart.items || cart.items.length === 0) {
+      alert("Carrinho vazio. Adicione produtos antes de finalizar.")
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       const order = await saveOrder({
@@ -71,6 +83,8 @@ export default function CheckoutPage() {
         total: cart.total,
       })
 
+      console.log("Pedido salvo:", order)
+
       clearCart()
       router.push(`/pedido-confirmado?orderId=${order.id}`)
     } catch (error) {
@@ -80,7 +94,7 @@ export default function CheckoutPage() {
     }
   }
 
-  if (cart.items.length === 0) return null
+  if (!cart.items || cart.items.length === 0) return null
 
   return (
     <div className="min-h-screen bg-background">
