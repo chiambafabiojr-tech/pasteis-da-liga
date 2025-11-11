@@ -1,12 +1,12 @@
-// lib/orders.ts
 import { db } from "./firebase";
 import { collection, getDocs, doc, getDoc, addDoc } from "firebase/firestore";
 
 export type Order = {
   id: string;
-  items: any[];
-  total: number;
-  createdAt: string;
+  name?: string;
+  value?: number;
+  status?: string;
+  createdAt?: string;
 };
 
 export const getOrders = async (): Promise<Order[]> => {
