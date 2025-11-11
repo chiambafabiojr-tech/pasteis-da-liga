@@ -1,17 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getOrders } from "@/lib/orders";
-
-type Order = {
-  id: string;
-  name?: string;
-  value?: number;
-  status?: string;
-};
+import { getOrders, Order } from "@/lib/orders";
 
 export default function AdminPage() {
-  const [orders, setOrders] = useState<Order[] | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -21,15 +14,12 @@ export default function AdminPage() {
         const data = await getOrders();
         console.log("📦 Pedidos recebidos do Firebase:", data);
 
-        if (!data || !Array.isArray(data)) {
-          throw new Error("Dados inválidos recebidos");
-        }
+        if (!data || !Array.isArray(data)) throw new Error("Dados inválidos");
 
         setOrders(data);
       } catch (err) {
         console.error("❌ Erro ao buscar pedidos:", err);
         setError(true);
-        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -52,7 +42,7 @@ export default function AdminPage() {
       </div>
     );
 
-  if (!orders || orders.length === 0)
+  if (!orders.length)
     return (
       <div className="p-6">
         <p>Nenhum pedido encontrado.</p>
@@ -63,17 +53,26 @@ export default function AdminPage() {
     <div className="container mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Pedidos</h1>
       <div className="grid gap-4">
-        {orders?.map((order) => (
-          <div key={order.id} className="border rounded-lg p-4 shadow">
-            <h3 className="font-semibold">
-              {order.name || "Sem nome informado"}
+        {orders.map((order) => (
+          <div key={order.id} className="border rounded-lg p-4 shadow bg-white">
+            <h3 className="font-semibold text-lg">
+              {order.customerName || "Cliente não informado"}
             </h3>
-            <p className="text-sm text-gray-600">ID: {order.id}</p>
-            <p className="text-sm">
-              Status: {order.status || "Desconhecido"}
+            <p className="text-sm text-gray-600">📱 {order.customerPhone}</p>
+            {order.customerEmail && (
+              <p className="text-sm text-gray-600">✉️ {order.customerEmail}</p>
+            )}
+            <p className="text-sm text-gray-600 mt-2">
+              💰 Total: R$ {order.total.toFixed(2)}
             </p>
-            <p className="font-bold">
-              R$ {order.value ? order.value.toFixed(2) : "0.00"}
+            <p className="text-sm text-gray-600">
+              💳 Pagamento: {order.paymentMethod.toUpperCase()}
+            </p>
+            <p className="text-sm mt-2 font-semibold">
+              Status: {order.status || "Pendente"}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              Criado em: {new Date(order.createdAt).toLocaleString()}
             </p>
           </div>
         ))}
