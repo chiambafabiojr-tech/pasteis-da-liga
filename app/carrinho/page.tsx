@@ -7,6 +7,7 @@ import { saveOrder } from "@/lib/orders";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import QRCode from "qrcode.react";
 
 export default function CartPage() {
   const router = useRouter();
@@ -17,6 +18,8 @@ export default function CartPage() {
     customerPhone: "",
     customerEmail: "",
   });
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cash">("pix");
+  const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,10 +33,18 @@ export default function CartPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
+  const handleSubmit = async () => {
+    if (!formData.customerName || !formData.customerPhone) {
+      alert("Preencha todos os campos obrigatórios!");
+      return;
+    }
+    if (paymentMethod === "pix" && !paymentProof) {
+      alert("Envie o comprovante do PIX!");
+      return;
+    }
+
     setLoading(true);
+    setError(null);
 
     try {
       const formattedItems = cartItems.map((item) => ({
@@ -49,18 +60,19 @@ export default function CartPage() {
         items: formattedItems,
         total,
         customerName: formData.customerName,
-        customerEmail: formData.customerEmail || "",
         customerPhone: formData.customerPhone,
-        paymentMethod: "cash", // somente dinheiro
-        paymentProof: "",      // não existe comprovante
+        customerEmail: formData.customerEmail || "",
+        paymentMethod,
+        paymentProof,
       });
 
-      if (!savedOrder.id) throw new Error("O ID do pedido não foi retornado.");
+      if (!savedOrder.id) throw new Error("ID do pedido não retornado.");
 
       clearCart();
       router.push(`/pedido-confirmado?orderId=${savedOrder.id}`);
     } catch (err: any) {
-      setError(err.message || "Erro desconhecido. Consulte o console.");
+      console.error("Erro ao finalizar pedido:", err);
+      setError(err.message || "Erro desconhecido.");
     } finally {
       setLoading(false);
     }
@@ -74,51 +86,100 @@ export default function CartPage() {
     );
 
   return (
-    <div className="min-h-screen p-4">
-      <h1 className="text-2xl font-bold mb-4">Seu Carrinho</h1>
+    <div className="min-h-screen p-4 flex flex-col lg:flex-row gap-6">
+      {/* Formulário + Pagamento */}
+      <div className="flex-1 space-y-6 max-w-md">
+        <Card className="p-6 shadow-md rounded-lg space-y-4">
+          <h2 className="text-xl font-semibold">Informações do Cliente</h2>
+          <Input
+            placeholder="Nome"
+            name="customerName"
+            value={formData.customerName}
+            onChange={handleInputChange}
+            required
+          />
+          <Input
+            placeholder="Telefone"
+            name="customerPhone"
+            value={formData.customerPhone}
+            onChange={handleInputChange}
+            required
+          />
+          <Input
+            placeholder="Email"
+            name="customerEmail"
+            value={formData.customerEmail}
+            onChange={handleInputChange}
+          />
+        </Card>
 
-      <div className="space-y-4 mb-8">
-        {cartItems.map((item) => (
-          <Card key={item.product.id} className="p-4 flex justify-between items-center">
-            <div>
-              <p>{item.product.name}</p>
-              <p>
-                {item.quantity} x R$ {item.product.price.toFixed(2)}
+        <Card className="p-6 shadow-md rounded-lg space-y-4">
+          <h2 className="text-xl font-semibold">Forma de Pagamento</h2>
+          <div className="flex gap-4">
+            <Button
+              variant={paymentMethod === "pix" ? "default" : "outline"}
+              onClick={() => setPaymentMethod("pix")}
+            >
+              PIX
+            </Button>
+            <Button
+              variant={paymentMethod === "cash" ? "default" : "outline"}
+              onClick={() => setPaymentMethod("cash")}
+            >
+              Dinheiro
+            </Button>
+          </div>
+
+          {paymentMethod === "pix" && (
+            <div className="mt-4 space-y-3">
+              <p className="text-sm text-gray-700">
+                Escaneie o QR Code abaixo e envie o comprovante:
               </p>
+              <div className="border rounded-md p-4 flex justify-center items-center bg-gray-50">
+                <QRCode
+                  value={`pix://pagamento?amount=${total}&key=SEU_CHAVE_PIX`}
+                  size={200}
+                  level="H"
+                  includeMargin={true}
+                />
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setPaymentProof(e.target.files ? e.target.files[0] : null)
+                }
+                className="mt-2"
+              />
             </div>
-            <p className="font-bold">R$ {(item.product.price * item.quantity).toFixed(2)}</p>
-          </Card>
-        ))}
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
-        <Input
-          placeholder="Nome"
-          name="customerName"
-          value={formData.customerName}
-          onChange={handleInputChange}
-          required
-        />
-        <Input
-          placeholder="Telefone"
-          name="customerPhone"
-          value={formData.customerPhone}
-          onChange={handleInputChange}
-          required
-        />
-        <Input
-          placeholder="Email"
-          name="customerEmail"
-          value={formData.customerEmail}
-          onChange={handleInputChange}
-        />
+          )}
+        </Card>
 
         {error && <p className="text-red-500">{error}</p>}
 
-        <Button type="submit" disabled={loading}>
+        <Button type="button" onClick={handleSubmit} disabled={loading} className="w-full">
           {loading ? "Processando..." : `Finalizar Pedido (R$ ${total.toFixed(2)})`}
         </Button>
-      </form>
+      </div>
+
+      {/* Resumo do Pedido */}
+      <div className="w-full lg:w-1/3">
+        <Card className="p-6 shadow-md rounded-lg space-y-3 sticky top-6">
+          <h2 className="text-xl font-semibold">Resumo do Pedido</h2>
+          {cartItems.map((item) => (
+            <div key={item.product.id} className="flex justify-between py-2 border-b">
+              <span>
+                {item.product.name} x {item.quantity}
+              </span>
+              <span>R$ {(item.product.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="flex justify-between font-bold pt-2">
+            <span>Total:</span>
+            <span>R$ {total.toFixed(2)}</span>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
