@@ -42,9 +42,7 @@ try {
   console.log("[v0] Firestore criado com sucesso")
   console.log("[v0] Firebase inicializado completamente para pasteis-da-liga")
 } catch (error) {
-  console.error("[v0] ERRO CRÍTICO ao inicializar Firebase:", error)
-  console.error("[v0] Tipo do erro:", typeof error)
-  console.error("[v0] Detalhes:", JSON.stringify(error, null, 2))
+  console.error("Erro ao inicializar Firebase:", error)
   throw error
 }
 
