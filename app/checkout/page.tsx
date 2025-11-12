@@ -1,5 +1,6 @@
 "use client"
 
+import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { getCart, clearCart } from "@/lib/cart"
@@ -21,8 +22,9 @@ const PIX_CONFIG = {
 
 export default function CheckoutPage() {
   const router = useRouter()
-  const [cart, setCart] = useState<any | null>(null)
+  const [cart, setCart] = useState(getCart())
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     customerName: "",
@@ -34,11 +36,11 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     const currentCart = getCart()
-    if (!currentCart || currentCart.items.length === 0) {
-      router.push("/")
-      return
-    }
     setCart(currentCart)
+
+    if (currentCart.items.length === 0) {
+      router.push("/")
+    }
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,26 +50,19 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-
-    if (!cart || cart.items.length === 0) {
-      alert("O carrinho está vazio.")
-      setIsSubmitting(false)
-      return
-    }
+    setError(null)
 
     try {
+      if (cart.items.length === 0) throw new Error("O carrinho está vazio.")
+
       const order = await saveOrder({
         customerName: formData.customerName,
         customerPhone: formData.customerPhone,
         customerEmail: formData.customerEmail || "",
         paymentMethod: formData.paymentMethod,
         paymentProof: formData.paymentProof || "",
-        items: cart.items.map((item: any) => ({
-          product: {
-            id: item.product.id,
-            name: item.product.name,
-            price: item.product.price,
-          },
+        items: cart.items.map((item) => ({
+          product: { id: item.product.id, name: item.product.name, price: item.product.price },
           quantity: item.quantity,
         })),
         total: cart.total,
@@ -75,19 +70,18 @@ export default function CheckoutPage() {
 
       clearCart()
       router.push(`/pedido-confirmado?orderId=${order.id}`)
-    } catch (error: any) {
-      console.error("❌ Erro ao salvar pedido:", error)
-      alert(error.message || "Erro ao processar pedido. Tente novamente.")
+    } catch (err: any) {
+      console.error("❌ Erro ao salvar pedido:", err)
+      setError(err.message || "Erro ao processar pedido.")
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  if (!cart) return null // Espera carregar o cart
+  if (!cart || cart.items.length === 0) return null
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b-4 border-primary bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div>
@@ -97,20 +91,18 @@ export default function CheckoutPage() {
 
           <Link href="/carrinho">
             <Button variant="outline" className="border-2 font-bold bg-transparent flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" />
-              Voltar
+              <ArrowLeft className="h-4 w-4" /> Voltar
             </Button>
           </Link>
         </div>
       </header>
 
       <div className="container mx-auto px-4 py-12 grid lg:grid-cols-3 gap-8">
-        {/* Checkout Form */}
         <div className="lg:col-span-2">
           <Card className="p-8 border-2 border-border">
+            {error && <p className="text-red-500 font-bold mb-4">{error}</p>}
             <h2 className="text-2xl font-bold text-foreground mb-6">Informações de Entrega</h2>
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Customer Info */}
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="customerName" className="text-base font-bold">Nome Completo *</Label>
@@ -155,7 +147,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div className="pt-6 border-t-2 border-border">
                 <Label className="text-base font-bold mb-4 block">Forma de Pagamento *</Label>
 
@@ -243,19 +234,14 @@ export default function CheckoutPage() {
           </Card>
         </div>
 
-        {/* Order Summary */}
         <div className="lg:col-span-1">
           <Card className="p-6 border-2 border-primary sticky top-4">
             <h3 className="text-xl font-bold text-foreground mb-4">Resumo do Pedido</h3>
             <div className="space-y-3 mb-6">
-              {cart.items.map((item: any) => (
+              {cart.items.map((item) => (
                 <div key={item.product.id} className="flex justify-between text-sm">
-                  <span className="text-foreground">
-                    {item.quantity}x {item.product.name}
-                  </span>
-                  <span className="font-bold text-foreground">
-                    R$ {(item.product.price * item.quantity).toFixed(2)}
-                  </span>
+                  <span className="text-foreground">{item.quantity}x {item.product.name}</span>
+                  <span className="font-bold text-foreground">R$ {(item.product.price * item.quantity).toFixed(2)}</span>
                 </div>
               ))}
             </div>
