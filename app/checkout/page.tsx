@@ -4,11 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getCart, clearCart } from "@/lib/cart";
 import { saveOrder } from "@/lib/orders";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import PixQRCode from "@/components/PixQRCode";
 
 interface CartItem {
   id: string;
@@ -22,108 +20,138 @@ export default function CheckoutPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"pix" | "cash">("pix");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pixPaid, setPixPaid] = useState<File | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const total = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
 
   useEffect(() => {
-    const storedCart = getCart();
-    setCart(storedCart);
+    const items = getCart();
+    setCart(items);
   }, []);
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const handleSubmit = async () => {
+    if (!name || !email || !phone) {
+      alert("Preencha todos os campos!");
+      return;
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+    if (paymentMethod === "pix" && !pixPaid) {
+      alert("Envie o comprovante de pagamento PIX!");
+      return;
+    }
 
+    setLoading(true);
     try {
       await saveOrder({
-        customerName: name,
-        customerEmail: email,
-        paymentMethod,
+        customer: { name, email, phone },
         items: cart,
         total,
+        paymentMethod,
+        pixPaid,
       });
-
       clearCart();
       router.push("/success");
-    } catch (error) {
-      console.error(error);
-      setIsSubmitting(false);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao enviar pedido. Tente novamente.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Formulário */}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Card>
-          <CardContent className="space-y-4">
-            <h2 className="text-lg font-semibold">Informações do Cliente</h2>
-            <Input
-              placeholder="Nome"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <Input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <h2 className="text-lg font-semibold mt-4">Pagamento</h2>
-            <RadioGroup
-              value={paymentMethod}
-              onValueChange={(value) => setPaymentMethod(value as "pix" | "cash")}
-              className="flex space-x-4 mt-2"
-            >
-              <label className="flex items-center space-x-2">
-                <RadioGroupItem value="pix" />
-                <span>PIX</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <RadioGroupItem value="cash" />
-                <span>Dinheiro</span>
-              </label>
-            </RadioGroup>
-
-            {paymentMethod === "pix" && (
-              <div className="mt-4">
-                <PixQRCode amount={total} />
-              </div>
-            )}
-
-            <Button type="submit" disabled={isSubmitting} className="mt-4">
-              {isSubmitting ? "Processando..." : "Finalizar Pedido"}
-            </Button>
-          </CardContent>
+    <div className="flex flex-col md:flex-row gap-6 p-6">
+      {/* Formulário do Cliente e Pagamento */}
+      <div className="flex-1 space-y-6">
+        <Card className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Informações do Cliente</h2>
+          <Input
+            placeholder="Nome"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+          <Input
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+          <Input
+            placeholder="Telefone"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+          />
         </Card>
-      </form>
+
+        <Card className="p-6 space-y-4">
+          <h2 className="text-lg font-semibold">Forma de Pagamento</h2>
+          <div className="flex gap-4">
+            <Button
+              variant={paymentMethod === "pix" ? "default" : "outline"}
+              onClick={() => setPaymentMethod("pix")}
+            >
+              PIX
+            </Button>
+            <Button
+              variant={paymentMethod === "cash" ? "default" : "outline"}
+              onClick={() => setPaymentMethod("cash")}
+            >
+              Dinheiro
+            </Button>
+          </div>
+
+          {paymentMethod === "pix" && (
+            <div className="mt-4 space-y-2">
+              <p>Escaneie o QR Code abaixo e envie o comprovante:</p>
+              <div className="border p-4 flex justify-center items-center">
+                {/* Aqui você pode gerar o QR Code real */}
+                <div className="bg-gray-200 w-48 h-48 flex items-center justify-center">
+                  QR Code: R$ {total.toFixed(2)}
+                </div>
+              </div>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) =>
+                  setPixPaid(e.target.files ? e.target.files[0] : null)
+                }
+              />
+            </div>
+          )}
+        </Card>
+
+        <Button
+          className="w-full mt-4"
+          onClick={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? "Processando..." : "Finalizar Pedido"}
+        </Button>
+      </div>
 
       {/* Resumo do Pedido */}
-      <Card>
-        <CardContent className="space-y-2">
+      <div className="w-full md:w-1/3">
+        <Card className="p-6 space-y-2">
           <h2 className="text-lg font-semibold">Resumo do Pedido</h2>
-          {cart.length === 0 ? (
-            <p>Seu carrinho está vazio.</p>
-          ) : (
-            <ul className="space-y-2">
-              {cart.map((item) => (
-                <li key={item.id} className="flex justify-between">
-                  <span>
-                    {item.name} x {item.quantity}
-                  </span>
-                  <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <hr className="my-2" />
-          <div className="flex justify-between font-semibold">
+          {cart.map((item) => (
+            <div
+              key={item.id}
+              className="flex justify-between border-b py-2 text-sm"
+            >
+              <span>
+                {item.name} x {item.quantity}
+              </span>
+              <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
+          <div className="flex justify-between font-semibold pt-2">
             <span>Total:</span>
             <span>R$ {total.toFixed(2)}</span>
           </div>
-        </CardContent>
-      <
+        </Card>
+      </div>
+    </div>
+  );
+}
