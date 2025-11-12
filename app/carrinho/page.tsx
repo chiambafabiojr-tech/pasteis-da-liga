@@ -7,7 +7,6 @@ import { saveOrder } from "@/lib/orders";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import QRCode from "qrcode.react";
 
 export default function CartPage() {
   const router = useRouter();
@@ -18,8 +17,6 @@ export default function CartPage() {
     customerPhone: "",
     customerEmail: "",
   });
-  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cash">("pix");
-  const [paymentProof, setPaymentProof] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,18 +30,10 @@ export default function CartPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async () => {
-    if (!formData.customerName || !formData.customerPhone) {
-      alert("Preencha todos os campos obrigatórios!");
-      return;
-    }
-    if (paymentMethod === "pix" && !paymentProof) {
-      alert("Envie o comprovante do PIX!");
-      return;
-    }
-
-    setLoading(true);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
+    setLoading(true);
 
     try {
       const formattedItems = cartItems.map((item) => ({
@@ -62,17 +51,16 @@ export default function CartPage() {
         customerName: formData.customerName,
         customerEmail: formData.customerEmail || "",
         customerPhone: formData.customerPhone,
-        paymentMethod,
-        paymentProof,
+        paymentMethod: "cash", // somente dinheiro
+        paymentProof: "",      // não existe comprovante
       });
 
-      if (!savedOrder.id) throw new Error("ID do pedido não retornado.");
+      if (!savedOrder.id) throw new Error("O ID do pedido não foi retornado.");
 
       clearCart();
       router.push(`/pedido-confirmado?orderId=${savedOrder.id}`);
     } catch (err: any) {
-      console.error("Erro ao finalizar pedido:", err);
-      setError(err.message || "Erro desconhecido.");
+      setError(err.message || "Erro desconhecido. Consulte o console.");
     } finally {
       setLoading(false);
     }
@@ -86,50 +74,51 @@ export default function CartPage() {
     );
 
   return (
-    <div className="min-h-screen p-4 flex flex-col lg:flex-row gap-6">
-      {/* Formulário + Pagamento */}
-      <div className="flex-1 space-y-6 max-w-md">
-        <Card className="p-6 shadow-md rounded-lg space-y-4">
-          <h2 className="text-xl font-semibold">Informações do Cliente</h2>
-          <Input
-            placeholder="Nome"
-            name="customerName"
-            value={formData.customerName}
-            onChange={handleInputChange}
-            required
-          />
-          <Input
-            placeholder="Telefone"
-            name="customerPhone"
-            value={formData.customerPhone}
-            onChange={handleInputChange}
-            required
-          />
-          <Input
-            placeholder="Email"
-            name="customerEmail"
-            value={formData.customerEmail}
-            onChange={handleInputChange}
-          />
-        </Card>
+    <div className="min-h-screen p-4">
+      <h1 className="text-2xl font-bold mb-4">Seu Carrinho</h1>
 
-        <Card className="p-6 shadow-md rounded-lg space-y-4">
-          <h2 className="text-xl font-semibold">Forma de Pagamento</h2>
-          <div className="flex gap-4">
-            <Button
-              variant={paymentMethod === "pix" ? "default" : "outline"}
-              onClick={() => setPaymentMethod("pix")}
-            >
-              PIX
-            </Button>
-            <Button
-              variant={paymentMethod === "cash" ? "default" : "outline"}
-              onClick={() => setPaymentMethod("cash")}
-            >
-              Dinheiro
-            </Button>
-          </div>
+      <div className="space-y-4 mb-8">
+        {cartItems.map((item) => (
+          <Card key={item.product.id} className="p-4 flex justify-between items-center">
+            <div>
+              <p>{item.product.name}</p>
+              <p>
+                {item.quantity} x R$ {item.product.price.toFixed(2)}
+              </p>
+            </div>
+            <p className="font-bold">R$ {(item.product.price * item.quantity).toFixed(2)}</p>
+          </Card>
+        ))}
+      </div>
 
-          {paymentMethod === "pix" && (
-            <div className="mt-4 space-y-3">
-              <p className="text-sm text-gray-700">
+      <form onSubmit={handleSubmit} className="space-y-4 max-w-md">
+        <Input
+          placeholder="Nome"
+          name="customerName"
+          value={formData.customerName}
+          onChange={handleInputChange}
+          required
+        />
+        <Input
+          placeholder="Telefone"
+          name="customerPhone"
+          value={formData.customerPhone}
+          onChange={handleInputChange}
+          required
+        />
+        <Input
+          placeholder="Email"
+          name="customerEmail"
+          value={formData.customerEmail}
+          onChange={handleInputChange}
+        />
+
+        {error && <p className="text-red-500">{error}</p>}
+
+        <Button type="submit" disabled={loading}>
+          {loading ? "Processando..." : `Finalizar Pedido (R$ ${total.toFixed(2)})`}
+        </Button>
+      </form>
+    </div>
+  );
+}
