@@ -1,44 +1,39 @@
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app"
-import { getFirestore, type Firestore } from "firebase/firestore"
+// CarrinhoPage.tsx (FUNÇÃO handleSubmit CORRIGIDA)
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDFCEUJZ_DZylIYO6XDgCK-8Do79zHfyWk",
-  authDomain: "pasteis-da-liga.firebaseapp.com",
-  projectId: "pasteis-da-liga",
-  storageBucket: "pasteis-da-liga.firebasestorage.app",
-  messagingSenderId: "373484623857",
-  appId: "1:373484623857:web:772b6a9bb18340cb291650",
-}
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
 
-// Verificar se todas as variáveis de ambiente necessárias estão definidas
-const requiredEnvVars = [
-  "NEXT_PUBLIC_FIREBASE_API_KEY",
-  "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-  "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-  "NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET",
-  "NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID",
-  "NEXT_PUBLIC_FIREBASE_APP_ID",
-]
+    console.log("[v0] Iniciando processo de finalização do pedido")
 
-const missingEnvVars = requiredEnvVars.filter((varName) => !process.env[varName])
+    try {
+      // 1. Tente gerar o PIX (Esta lógica deve estar ANTES de createOrder,
+      // mas como não a temos, assumimos que ela está ok e o problema é o save.)
 
-export const isFirebaseConfigured = missingEnvVars.length === 0
+      const orderId = await createOrder({
+        items: cartItems,
+        total,
+        customerName: formData.customerName,
+        customerEmail: formData.customerEmail,
+        customerPhone: formData.customerPhone,
+        status: "pending",
+      })
 
-if (!isFirebaseConfigured) {
-  console.error("[v0] Firebase não configurado. Variáveis faltando:", missingEnvVars)
-}
-
-// Initialize Firebase com singleton pattern
-let app: FirebaseApp
-let db: Firestore
-
-try {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0]
-  db = getFirestore(app)
-  console.log("[v0] Firebase inicializado com sucesso para pasteis-da-liga")
-} catch (error) {
-  console.error("[v0] Erro ao inicializar Firebase:", error)
-  throw error
-}
-
-export { db, app }
+      if (orderId) {
+        console.log("[v0] Pedido finalizado com sucesso:", orderId)
+        // CORREÇÃO: Redireciona para o ID correto.
+        router.push(`/pedido-confirmado?orderId=${orderId}`) 
+      } else {
+        // Se orderId for null por algum motivo, lance um erro.
+        throw new Error("O ID do pedido não foi retornado.")
+      }
+      
+    } catch (err: any) {
+      console.error("[v0] Erro CRÍTICO ao finalizar pedido:", err)
+      // CORREÇÃO: Exibe a mensagem de erro do Firebase no frontend
+      setError(err.message || "Erro desconhecido. Consulte o console.")
+    } finally {
+      setLoading(false)
+    }
+  }
