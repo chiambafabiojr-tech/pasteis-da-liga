@@ -24,6 +24,7 @@ export default function CheckoutPage() {
   const router = useRouter()
   const [cart, setCart] = useState(getCart())
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     customerName: "",
@@ -42,21 +43,15 @@ export default function CheckoutPage() {
   }, [router])
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    })
+    setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+    setError(null)
 
-    if (cart.items.length === 0) {
-      alert("O carrinho está vazio.")
-      setIsSubmitting(false)
-      return
-    }
+    console.log("[Checkout] Iniciando pedido...")
 
     try {
       const order = await saveOrder({
@@ -76,11 +71,13 @@ export default function CheckoutPage() {
         total: cart.total,
       })
 
+      console.log("[Checkout] Pedido salvo no Firestore:", order.id)
+
       clearCart()
       router.push(`/pedido-confirmado?orderId=${order.id}`)
-    } catch (error: any) {
-      console.error("❌ Erro ao salvar pedido:", error)
-      alert(error.message || "Erro ao processar pedido. Tente novamente.")
+    } catch (err: any) {
+      console.error("[Checkout] ERRO ao salvar pedido:", err)
+      setError(err.message || "Erro desconhecido. Verifique o console do navegador.")
     } finally {
       setIsSubmitting(false)
     }
@@ -125,6 +122,7 @@ export default function CheckoutPage() {
                     required
                     className="mt-2 border-2"
                     placeholder="Seu nome"
+                    disabled={isSubmitting}
                   />
                 </div>
 
@@ -140,6 +138,7 @@ export default function CheckoutPage() {
                       required
                       className="mt-2 border-2"
                       placeholder="(00) 00000-0000"
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -153,6 +152,7 @@ export default function CheckoutPage() {
                       onChange={handleInputChange}
                       className="mt-2 border-2"
                       placeholder="seu@email.com"
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -189,50 +189,6 @@ export default function CheckoutPage() {
                     </Label>
                   </div>
                 </RadioGroup>
-
-                {formData.paymentMethod === "pix" && (
-                  <div className="mt-6 space-y-4">
-                    <Card className="p-6 bg-primary/5 border-2 border-primary">
-                      <div className="flex items-start gap-3 mb-4">
-                        <AlertCircle className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="font-bold text-foreground text-lg mb-2">Como Pagar com PIX</p>
-                          <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                            <li>Abra o app do seu banco</li>
-                            <li>Escolha pagar com PIX QR Code</li>
-                            <li>Escaneie o código abaixo</li>
-                            <li>Confirme o pagamento de R$ {cart.total.toFixed(2)}</li>
-                            <li>Cole o código da transação no campo abaixo</li>
-                          </ol>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <PixQRCode
-                      pixData={{
-                        pixKey: PIX_CONFIG.pixKey,
-                        merchantName: PIX_CONFIG.merchantName,
-                        merchantCity: PIX_CONFIG.merchantCity,
-                        amount: cart.total,
-                        description: "Pasteis da Liga",
-                        txid: `PEDIDO${Date.now()}`,
-                      }}
-                    />
-
-                    <div>
-                      <Label htmlFor="paymentProof" className="text-base font-bold">Comprovante de Pagamento *</Label>
-                      <Input
-                        id="paymentProof"
-                        name="paymentProof"
-                        value={formData.paymentProof}
-                        onChange={handleInputChange}
-                        required
-                        className="mt-2 border-2"
-                        placeholder="Cole o código da transação ou últimos 6 dígitos"
-                      />
-                    </div>
-                  </div>
-                )}
               </div>
 
               <Button
@@ -242,41 +198,9 @@ export default function CheckoutPage() {
               >
                 {isSubmitting ? "Processando..." : "Confirmar Pedido"}
               </Button>
+
+              {error && <p className="text-red-600 mt-2">{error}</p>}
             </form>
-          </Card>
-        </div>
-
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <Card className="p-6 border-2 border-primary sticky top-4">
-            <h3 className="text-xl font-bold text-foreground mb-4">Resumo do Pedido</h3>
-            <div className="space-y-3 mb-6">
-              {cart.items.map((item) => (
-                <div key={item.product.id} className="flex justify-between text-sm">
-                  <span className="text-foreground">
-                    {item.quantity}x {item.product.name}
-                  </span>
-                  <span className="font-bold text-foreground">
-                    R$ {(item.product.price * item.quantity).toFixed(2)}
-                  </span>
-                </div>
-              ))}
-            </div>
-
-            <div className="border-t-2 border-border pt-4 space-y-2">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
-                <span>R$ {cart.total.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Taxa de entrega</span>
-                <span className="text-secondary font-bold">Grátis</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t-2 border-border">
-                <span className="text-lg font-bold text-foreground">Total</span>
-                <span className="text-2xl font-bold text-primary">R$ {cart.total.toFixed(2)}</span>
-              </div>
-            </div>
           </Card>
         </div>
       </div>
