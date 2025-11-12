@@ -15,7 +15,7 @@ import Link from "next/link"
 import { PixQRCode } from "@/components/pix-qrcode"
 
 const PIX_CONFIG = {
-  pixKey: "54870892804", // CPF com 11 dígitos
+  pixKey: "54870892804",
   merchantName: "Mariane Ferreira de Laia",
   merchantCity: "Itatiba",
 }
@@ -36,7 +36,6 @@ export default function CheckoutPage() {
   useEffect(() => {
     const currentCart = getCart()
     setCart(currentCart)
-
     if (currentCart.items.length === 0) {
       router.push("/")
     }
@@ -52,6 +51,12 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
+
+    if (cart.items.length === 0) {
+      alert("O carrinho está vazio.")
+      setIsSubmitting(false)
+      return
+    }
 
     try {
       const order = await saveOrder({
@@ -73,9 +78,10 @@ export default function CheckoutPage() {
 
       clearCart()
       router.push(`/pedido-confirmado?orderId=${order.id}`)
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Erro ao salvar pedido:", error)
-      alert("Erro ao processar pedido. Tente novamente.")
+      alert(error.message || "Erro ao processar pedido. Tente novamente.")
+    } finally {
       setIsSubmitting(false)
     }
   }
