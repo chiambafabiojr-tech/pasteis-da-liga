@@ -1,127 +1,99 @@
-"use client";
+"use client"
 
-import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { getOrderById, type Order } from "@/lib/orders";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import Link from "next/link";
+import { useEffect, useState, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
+import { getOrderById, type Order } from "@/lib/orders"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import { CheckCircle2, Package } from "lucide-react"
+import Link from "next/link"
+import { Spinner } from "@/components/ui/spinner"
 
-function OrderConfirmedContent() {
-  const searchParams = useSearchParams();
-  const orderId = searchParams.get("orderId");
-  const [order, setOrder] = useState<Order | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function PedidoConfirmadoContent() {
+  const searchParams = useSearchParams()
+  const orderId = searchParams.get("id")
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchOrder = async () => {
-      if (!orderId) {
-        setLoading(false);
-        setError("ID do pedido não encontrado.");
-        return;
+      if (orderId) {
+        const orderData = await getOrderById(orderId)
+        setOrder(orderData)
       }
-
-      try {
-        const foundOrder = await getOrderById(orderId);
-        setOrder(foundOrder || null);
-
-        if (!foundOrder) {
-          setError("Pedido não encontrado ou ID inválido.");
-        }
-      } catch (e) {
-        console.error("Erro ao buscar pedido:", e);
-        setError("Falha ao carregar detalhes do pedido.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrder();
-  }, [orderId]);
+      setLoading(false)
+    }
+    fetchOrder()
+  }, [orderId])
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando detalhes do pedido...</p>
+      <div className="flex items-center justify-center min-h-screen">
+        <Spinner className="h-8 w-8" />
       </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center p-8">
-          <h2 className="text-2xl font-bold text-red-500 mb-4">Erro ao Carregar Pedido</h2>
-          <p className="text-muted-foreground">{error}</p>
-          <Link href="/">
-            <Button className="mt-6">Voltar ao Início</Button>
-          </Link>
-        </div>
-      </div>
-    );
+    )
   }
 
   return (
-    <div className="min-h-screen p-6 flex flex-col lg:flex-row gap-6">
-      {/* Resumo do Pedido */}
-      <div className="flex-1 space-y-6 max-w-md">
-        <Card className="p-6 shadow-md rounded-lg space-y-4">
-          <h2 className="text-xl font-semibold">Pedido Confirmado!</h2>
-          <p>Obrigado pelo seu pedido, {order?.customerName}.</p>
-          <p>Forma de pagamento: <strong>{order?.paymentMethod === "pix" ? "PIX" : "Dinheiro"}</strong></p>
+    <div className="container mx-auto py-12 px-4">
+      <Card className="max-w-2xl mx-auto p-8">
+        <div className="text-center space-y-6">
+          <div className="flex justify-center">
+            <CheckCircle2 className="h-16 w-16 text-green-500" />
+          </div>
 
-          {order?.paymentMethod === "pix" && (
-            <div className="mt-4 space-y-2">
-              <p className="text-sm text-gray-700">Comprovante enviado:</p>
-              {order.paymentProof ? (
-                <img
-                  src={order.paymentProof}
-                  alt="Comprovante de Pagamento"
-                  className="w-48 h-48 object-contain border rounded-md"
-                />
-              ) : (
-                <p className="text-sm text-red-500">Comprovante não enviado.</p>
-              )}
+          <h1 className="text-3xl font-bold">Pedido Confirmado!</h1>
+
+          {order ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                <Package className="h-5 w-5" />
+                <span>Pedido #{order.id}</span>
+              </div>
+
+              <div className="border-t pt-4">
+                <h2 className="font-semibold mb-2">Itens do Pedido:</h2>
+                <div className="space-y-2">
+                  {order.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between text-sm">
+                      <span>
+                        {item.quantity}x {item.name}
+                      </span>
+                      <span>R$ {item.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="border-t mt-4 pt-4 flex justify-between font-bold">
+                  <span>Total:</span>
+                  <span>R$ {order.total.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
+          ) : (
+            <p className="text-muted-foreground">Obrigado pelo seu pedido! Você receberá uma confirmação em breve.</p>
           )}
 
-          <Link href="/">
-            <Button className="mt-4">Voltar ao Início</Button>
-          </Link>
-        </Card>
-      </div>
-
-      {/* Itens do Pedido */}
-      <div className="w-full lg:w-1/3">
-        <Card className="p-6 shadow-md rounded-lg space-y-3 sticky top-6">
-          <h2 className="text-xl font-semibold">Resumo do Pedido</h2>
-          {order?.items.map((item) => (
-            <div key={item.product.id} className="flex justify-between py-2 border-b">
-              <span>{item.product.name} x {item.quantity}</span>
-              <span>R$ {(item.product.price * item.quantity).toFixed(2)}</span>
-            </div>
-          ))}
-          <div className="flex justify-between font-bold pt-2">
-            <span>Total:</span>
-            <span>R$ {order?.total.toFixed(2)}</span>
+          <div className="pt-6">
+            <Button asChild>
+              <Link href="/">Voltar para o início</Link>
+            </Button>
           </div>
-        </Card>
-      </div>
+        </div>
+      </Card>
     </div>
-  );
+  )
 }
 
 export default function PedidoConfirmadoPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <p className="text-muted-foreground">Carregando...</p>
+        <div className="flex items-center justify-center min-h-screen">
+          <Spinner className="h-8 w-8" />
         </div>
       }
     >
-      <OrderConfirmedContent />
+      <PedidoConfirmadoContent />
     </Suspense>
-  );
+  )
 }
