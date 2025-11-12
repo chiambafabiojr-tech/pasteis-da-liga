@@ -1,268 +1,129 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { getCart, clearCart } from "@/lib/cart"
-import { saveOrder } from "@/lib/orders"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { ArrowLeft, Banknote, Wallet, AlertCircle } from "lucide-react"
-import Link from "next/link"
-import { PixQRCode } from "@/components/pix-qrcode"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getCart, clearCart } from "@/lib/cart";
+import { saveOrder } from "@/lib/orders";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import PixQRCode from "@/components/PixQRCode";
 
-const PIX_CONFIG = {
-  pixKey: "54870892804",
-  merchantName: "Mariane Ferreira de Laia",
-  merchantCity: "Itatiba",
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
 }
 
 export default function CheckoutPage() {
-  const router = useRouter()
-  const [cart, setCart] = useState(getCart())
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const [formData, setFormData] = useState({
-    customerName: "",
-    customerPhone: "",
-    customerEmail: "",
-    paymentMethod: "pix" as "pix" | "cash",
-    paymentProof: "",
-  })
+  const router = useRouter();
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"pix" | "cash">("pix");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    const currentCart = getCart()
-    setCart(currentCart)
+    const storedCart = getCart();
+    setCart(storedCart);
+  }, []);
 
-    if (currentCart.items.length === 0) {
-      router.push("/")
-    }
-  }, [router])
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsSubmitting(true)
-    setError(null)
+    e.preventDefault();
+    setIsSubmitting(true);
 
     try {
-      if (cart.items.length === 0) throw new Error("O carrinho está vazio.")
+      await saveOrder({
+        customerName: name,
+        customerEmail: email,
+        paymentMethod,
+        items: cart,
+        total,
+      });
 
-      const order = await saveOrder({
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        customerEmail: formData.customerEmail || "",
-        paymentMethod: formData.paymentMethod,
-        paymentProof: formData.paymentProof || "",
-        items: cart.items.map((item) => ({
-          product: { id: item.product.id, name: item.product.name, price: item.product.price },
-          quantity: item.quantity,
-        })),
-        total: cart.total,
-      })
-
-      clearCart()
-      router.push(`/pedido-confirmado?orderId=${order.id}`)
-    } catch (err: any) {
-      console.error("❌ Erro ao salvar pedido:", err)
-      setError(err.message || "Erro ao processar pedido.")
-    } finally {
-      setIsSubmitting(false)
+      clearCart();
+      router.push("/success");
+    } catch (error) {
+      console.error(error);
+      setIsSubmitting(false);
     }
-  }
-
-  if (!cart || cart.items.length === 0) return null
+  };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b-4 border-primary bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground tracking-tight">Mariane Ferreira de Laia</h1>
-            <p className="text-sm text-muted-foreground">Finalizar Pedido</p>
-          </div>
+    <div className="max-w-4xl mx-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Formulário */}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Card>
+          <CardContent className="space-y-4">
+            <h2 className="text-lg font-semibold">Informações do Cliente</h2>
+            <Input
+              placeholder="Nome"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <h2 className="text-lg font-semibold mt-4">Pagamento</h2>
+            <RadioGroup
+              value={paymentMethod}
+              onValueChange={(value) => setPaymentMethod(value as "pix" | "cash")}
+              className="flex space-x-4 mt-2"
+            >
+              <label className="flex items-center space-x-2">
+                <RadioGroupItem value="pix" />
+                <span>PIX</span>
+              </label>
+              <label className="flex items-center space-x-2">
+                <RadioGroupItem value="cash" />
+                <span>Dinheiro</span>
+              </label>
+            </RadioGroup>
 
-          <Link href="/carrinho">
-            <Button variant="outline" className="border-2 font-bold bg-transparent flex items-center gap-2">
-              <ArrowLeft className="h-4 w-4" /> Voltar
+            {paymentMethod === "pix" && (
+              <div className="mt-4">
+                <PixQRCode amount={total} />
+              </div>
+            )}
+
+            <Button type="submit" disabled={isSubmitting} className="mt-4">
+              {isSubmitting ? "Processando..." : "Finalizar Pedido"}
             </Button>
-          </Link>
-        </div>
-      </header>
+          </CardContent>
+        </Card>
+      </form>
 
-      <div className="container mx-auto px-4 py-12 grid lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <Card className="p-8 border-2 border-border">
-            {error && <p className="text-red-500 font-bold mb-4">{error}</p>}
-            <h2 className="text-2xl font-bold text-foreground mb-6">Informações de Entrega</h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="customerName" className="text-base font-bold">Nome Completo *</Label>
-                  <Input
-                    id="customerName"
-                    name="customerName"
-                    value={formData.customerName}
-                    onChange={handleInputChange}
-                    required
-                    className="mt-2 border-2"
-                    placeholder="Seu nome"
-                  />
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="customerPhone" className="text-base font-bold">Telefone *</Label>
-                    <Input
-                      id="customerPhone"
-                      name="customerPhone"
-                      type="tel"
-                      value={formData.customerPhone}
-                      onChange={handleInputChange}
-                      required
-                      className="mt-2 border-2"
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-
-                  <div>
-                    <Label htmlFor="customerEmail" className="text-base font-bold">Email</Label>
-                    <Input
-                      id="customerEmail"
-                      name="customerEmail"
-                      type="email"
-                      value={formData.customerEmail}
-                      onChange={handleInputChange}
-                      className="mt-2 border-2"
-                      placeholder="seu@email.com"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="pt-6 border-t-2 border-border">
-                <Label className="text-base font-bold mb-4 block">Forma de Pagamento *</Label>
-
-                <RadioGroup
-                  value={formData.paymentMethod}
-                  onValueChange={(value) => setFormData({ ...formData, paymentMethod: value as any })}
-                  className="space-y-3"
-                >
-                  <div className="flex items-center space-x-3 border-2 border-border rounded-lg p-4 hover:border-primary transition-colors">
-                    <RadioGroupItem value="pix" id="pix" />
-                    <Label htmlFor="pix" className="flex items-center gap-3 cursor-pointer flex-1">
-                      <Wallet className="h-5 w-5 text-secondary" />
-                      <div>
-                        <p className="font-bold">PIX</p>
-                        <p className="text-sm text-muted-foreground">Pagamento instantâneo</p>
-                      </div>
-                    </Label>
-                  </div>
-
-                  <div className="flex items-center space-x-3 border-2 border-border rounded-lg p-4 hover:border-primary transition-colors">
-                    <RadioGroupItem value="cash" id="cash" />
-                    <Label htmlFor="cash" className="flex items-center gap-3 cursor-pointer flex-1">
-                      <Banknote className="h-5 w-5 text-secondary" />
-                      <div>
-                        <p className="font-bold">Dinheiro</p>
-                        <p className="text-sm text-muted-foreground">Pagamento na entrega</p>
-                      </div>
-                    </Label>
-                  </div>
-                </RadioGroup>
-
-                {formData.paymentMethod === "pix" && (
-                  <div className="mt-6 space-y-4">
-                    <Card className="p-6 bg-primary/5 border-2 border-primary">
-                      <div className="flex items-start gap-3 mb-4">
-                        <AlertCircle className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                        <div className="flex-1">
-                          <p className="font-bold text-foreground text-lg mb-2">Como Pagar com PIX</p>
-                          <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
-                            <li>Abra o app do seu banco</li>
-                            <li>Escolha pagar com PIX QR Code</li>
-                            <li>Escaneie o código abaixo</li>
-                            <li>Confirme o pagamento de R$ {cart.total.toFixed(2)}</li>
-                            <li>Cole o código da transação no campo abaixo</li>
-                          </ol>
-                        </div>
-                      </div>
-                    </Card>
-
-                    <PixQRCode
-                      pixData={{
-                        pixKey: PIX_CONFIG.pixKey,
-                        merchantName: PIX_CONFIG.merchantName,
-                        merchantCity: PIX_CONFIG.merchantCity,
-                        amount: cart.total,
-                        description: "Pasteis da Liga",
-                        txid: `PEDIDO${Date.now()}`,
-                      }}
-                    />
-
-                    <div>
-                      <Label htmlFor="paymentProof" className="text-base font-bold">Comprovante de Pagamento *</Label>
-                      <Input
-                        id="paymentProof"
-                        name="paymentProof"
-                        value={formData.paymentProof}
-                        onChange={handleInputChange}
-                        required
-                        className="mt-2 border-2"
-                        placeholder="Cole o código da transação ou últimos 6 dígitos"
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-lg py-6 mt-8"
-              >
-                {isSubmitting ? "Processando..." : "Confirmar Pedido"}
-              </Button>
-            </form>
-          </Card>
-        </div>
-
-        <div className="lg:col-span-1">
-          <Card className="p-6 border-2 border-primary sticky top-4">
-            <h3 className="text-xl font-bold text-foreground mb-4">Resumo do Pedido</h3>
-            <div className="space-y-3 mb-6">
-              {cart.items.map((item) => (
-                <div key={item.product.id} className="flex justify-between text-sm">
-                  <span className="text-foreground">{item.quantity}x {item.product.name}</span>
-                  <span className="font-bold text-foreground">R$ {(item.product.price * item.quantity).toFixed(2)}</span>
-                </div>
+      {/* Resumo do Pedido */}
+      <Card>
+        <CardContent className="space-y-2">
+          <h2 className="text-lg font-semibold">Resumo do Pedido</h2>
+          {cart.length === 0 ? (
+            <p>Seu carrinho está vazio.</p>
+          ) : (
+            <ul className="space-y-2">
+              {cart.map((item) => (
+                <li key={item.id} className="flex justify-between">
+                  <span>
+                    {item.name} x {item.quantity}
+                  </span>
+                  <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                </li>
               ))}
-            </div>
-
-            <div className="border-t-2 border-border pt-4 space-y-2">
-              <div className="flex justify-between text-muted-foreground">
-                <span>Subtotal</span>
-                <span>R$ {cart.total.toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between text-muted-foreground">
-                <span>Taxa de entrega</span>
-                <span className="text-secondary font-bold">Grátis</span>
-              </div>
-              <div className="flex justify-between items-center pt-2 border-t-2 border-border">
-                <span className="text-lg font-bold text-foreground">Total</span>
-                <span className="text-2xl font-bold text-primary">R$ {cart.total.toFixed(2)}</span>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
-  )
-}
+            </ul>
+          )}
+          <hr className="my-2" />
+          <div className="flex justify-between font-semibold">
+            <span>Total:</span>
+            <span>R$ {total.toFixed(2)}</span>
+          </div>
+        </CardContent>
+      <
